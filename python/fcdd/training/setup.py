@@ -119,12 +119,12 @@ def trainer_setup(
         ds_order = ['norm', 'anom']
     else:
         ds_order = ['anom', 'norm']
-    images = ds.preview(20)
-    logger.imsave(
-        'ds_preview', torch.cat([*images]), nrow=images.size(1),
-        rowheaders=ds_order if not isinstance(ds.train_set, GTMapADDataset)
-        else [*ds_order, '', *['gtno' if s == 'norm' else 'gtan' for s in ds_order]]
-    )
+    # images = ds.preview(20)
+    # logger.imsave(
+    #     'ds_preview', torch.cat([*images]), nrow=images.size(1),
+    #     rowheaders=ds_order if not isinstance(ds.train_set, GTMapADDataset)
+    #     else [*ds_order, '', *['gtno' if s == 'norm' else 'gtan' for s in ds_order]]
+    # )
     return {
         'net': net, 'dataset_loaders': loaders, 'opt': optimizer, 'sched': scheduler, 'logger': logger,
         'device': device, 'objective': objective, 'quantile': quantile, 'resdown': resdown,

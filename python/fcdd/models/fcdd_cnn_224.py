@@ -115,7 +115,7 @@ class FCDD_CNN224_VGG(FCDDNet):
 
         return x
 
-
+# binhtt: default
 class FCDD_CNN224_VGG_F(FCDD_CNN224_VGG):
     # VGG_11BN based net with most of the VGG layers having weights pretrained on the ImageNet classification task.
     # Additionally, these weights get frozen, i.e., the weights will not get updated during training.

@@ -3,7 +3,7 @@ from fcdd.models.bases import FCDDNet
 from fcdd.training.bases import BaseADTrainer
 from torch import Tensor
 
-
+# binhtt: loss function
 class FCDDTrainer(BaseADTrainer):
     def loss(self, outs: Tensor, ins: Tensor, labels: Tensor, gtmaps: Tensor = None, reduce='mean'):
         """ computes the FCDD loss """
@@ -16,7 +16,7 @@ class FCDDTrainer(BaseADTrainer):
 
     def __fcdd_loss(self, outs: Tensor, ins: Tensor, labels: Tensor, gtmaps: Tensor, reduce: str):
         loss = outs ** 2
-        loss = (loss + 1).sqrt() - 1
+        loss = (loss + 1).sqrt() - 1 # pseudo-Huber loss
         if gtmaps is None and len(set(labels.tolist())) > 1:
             loss = self.__supervised_loss(loss, labels)
         elif gtmaps is not None and isinstance(self.net, FCDDNet):
@@ -27,7 +27,7 @@ class FCDDTrainer(BaseADTrainer):
         if self.net.training:
             loss = loss.reshape(labels.size(0), -1).mean(-1)
             norm = loss[labels == 0]
-            anom = (-(((1 - (-loss[labels == 1]).exp()) + 1e-31).log()))
+            anom = -((1 - (-loss[labels == 1]).exp()) + 1e-31).log()
             loss[(1-labels).nonzero().squeeze()] = norm
             loss[labels.nonzero().squeeze()] = anom
         else:

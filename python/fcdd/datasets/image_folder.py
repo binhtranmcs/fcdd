@@ -148,6 +148,7 @@ class ADImageFolderDataset(TorchvisionDataset):
                 self._test_set, get_target_label_idx(self._test_set.targets, np.asarray(self.normal_classes))
             )
 
+    # binhtt4
     def balance_dataset(self):
         nominal_mask = (np.asarray(self._train_set.anomaly_labels) == self.nominal_label)
         nominal_mask = nominal_mask * np.isin(self._train_set.targets, np.asarray(self.normal_classes))
