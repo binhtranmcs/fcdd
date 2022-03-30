@@ -9,6 +9,8 @@ from fcdd.models.fcdd_cnn_28 import *
 from fcdd.models.fcdd_cnn_32 import *
 from fcdd.models.fcdd_cnn_224 import *
 from fcdd.models.resnet_50 import *
+from fcdd.models.vgg19 import *
+from fcdd.models.resnet18 import *
 
 
 def choices() -> List[str]:
