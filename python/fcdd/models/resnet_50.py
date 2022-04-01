@@ -99,3 +99,27 @@ class VGG16(FCDDNet):
         if ad:
             x = self.conv_final(x)
         return x
+
+
+class BNET(FCDDNet):
+    # def __init__(self):
+        # super(VGG16, self).__init__()
+    def __init__(self, in_shape, **kwargs):
+        super().__init__(in_shape, **kwargs)
+        assert self.bias, 'VGG net is only supported with bias atm!'
+
+        self.features = nn.Sequential(
+            # 64
+            self._create_conv2d(3, 64, 3, 1, 1, stride=2),
+            nn.BatchNorm2d(64), 
+            nn.ReLU(inplace=True),
+        )
+        
+        self.conv_final = self._create_conv2d(64, 1, 1)
+        
+
+    def forward(self, x, ad = True):
+        x = self.features(x)
+        if ad:
+            x = self.conv_final(x)
+        return x

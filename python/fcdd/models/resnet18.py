@@ -94,7 +94,7 @@ class RESNET18(FCDDNet):
     def _make_layer(self, planes: int, blocks: int, stride: int = 1, receptive=False) -> nn.Sequential:
         downsample = None
         if stride != 1 or self.inplanes != planes:
-            if receptive:
+            if receptive and False:
                 downsample = nn.Sequential(
                     self._create_conv2d(self.inplanes, planes, kernel_size=1, stride=stride, bias=False),
                     nn.BatchNorm2d(planes),
