@@ -5,6 +5,9 @@ import torch
 from kornia import gaussian_blur2d
 from scipy import signal
 from skimage.transform import rotate as im_rotate
+import cv2
+
+from fcdd.datasets.bezier import *
 
 
 def ceil(x: float):
@@ -210,3 +213,141 @@ def solid(size: torch.Size):
     """ Returns noise images in form of solid colors, i.e. one randomly chosen color per image. """
     assert len(size) == 4, 'size must be n x c x h x w'
     return torch.randint(0, 256, (size[:-2]))[:, :, None, None].repeat(1, 1, size[-2], size[-1]).byte()
+
+
+def bezier_noise(size: torch.Size, p: float = 0.01,
+                   blobshaperange: Tuple[Tuple[int, int], Tuple[int, int]] = ((3, 3), (5, 5)),
+                   fillval: int = 255, backval: int = 0, awgn: float = 0.0,
+                   colorrange: Tuple[int, int] = None) -> torch.Tensor:
+    """
+    Generates "confetti" noise, as seen in the paper.
+    The noise is based on sampling randomly many rectangles (in the following called blobs) at random positions.
+    Additionally, all blobs are of random size (within some range), of random rotation, and of random color.
+    The color is randomly chosen per blob, thus consistent within one blob.
+    :param size: size of the overall noise image(s), should be (n x h x w) or (n x c x h x w), i.e.
+        number of samples, channels, height, width. Blobs are grayscaled for (n x h x w) or c == 1.
+    :param p: the probability of inserting a blob per pixel.
+        The average number of blobs in the image is p * h * w.
+    :param blobshaperange: limits the random size of the blobs. For ((h0, h1), (w0, w1)), all blobs' width
+        is ensured to be in {w0, ..., w1}, and height to be in {h0, ..., h1}.
+    :param fillval: if the color is not randomly chosen (see colored parameter), this sets the color of all blobs.
+        This is also the maximum value used for clamping (see clamp parameter). Can be negative.
+    :param backval: the background pixel value, i.e. the color of pixels in the noise image that are not part
+         of a blob. Also used for clamping.
+    :param ensureblob: whether to ensure that there is at least one blob per noise image.
+    :param awgn: amount of additive white gaussian noise added to all blobs.
+    :param clamp: whether to clamp all noise image to the pixel value range (backval, fillval).
+    :param onlysquared: whether to restrict the blobs to be squares only.
+    :param rotation: the maximum amount of rotation (in degrees)
+    :param colorrange: the range of possible color values for each blob and channel.
+        Defaults to None, where the blobs are not colored, but instead parameter fillval is used.
+        First value can be negative.
+    :return: torch tensor containing n noise images. Either (n x c x h x w) or (n x h x w), depending on size.
+    """
+    assert len(size) == 4 or len(size) == 3, 'size must be n x c x h x w'
+    if isinstance(blobshaperange[0], int) and isinstance(blobshaperange[1], int):
+        blobshaperange = (blobshaperange, blobshaperange)
+    assert len(blobshaperange) == 2
+    assert len(blobshaperange[0]) == 2 and len(blobshaperange[1]) == 2
+    assert colorrange is None or len(size) == 4 and size[1] == 3
+    out_size = size
+    colors = []
+    if len(size) == 3:
+        size = (size[0], 1, size[1], size[2])  # add channel dimension
+    else:
+        size = tuple(size)  # Tensor(torch.size) -> tensor of shape size, Tensor((x, y)) -> Tensor with 2 elements x & y
+    mask = (torch.rand((size[0], size[2], size[3])) < p).unsqueeze(1)  # mask[i, j, k] == 1 for center of blob
+    # while ensureblob and (mask.view(mask.size(0), -1).sum(1).min() == 0):
+    #     idx = (mask.view(mask.size(0), -1).sum(1) == 0).nonzero().squeeze()
+    #     s = idx.size(0) if len(idx.shape) > 0 else 1
+    #     mask[idx] = (torch.rand((s, 1, size[2], size[3])) < p)
+    res = torch.empty(size).fill_(backval).int()
+    idx = mask.nonzero()  # [(idn, idz, idy, idx), ...] = indices of blob centers
+    if idx.reshape(-1).size(0) == 0:
+        return torch.zeros(out_size).int()
+
+    # all_shps = [
+    #     (x, y) for x in range(blobshaperange[0][0], blobshaperange[1][0] + 1)
+    #     for y in range(blobshaperange[0][1], blobshaperange[1][1] + 1) if not onlysquared or x == y
+    # ]
+
+    all_shps = [
+        (r / 10, e / 10, s) for r in range(20) for e in range(10) for s in range(8, 54)
+    ]
+
+    picks = torch.FloatTensor(idx.size(0)).uniform_(0, len(all_shps)).int()  # for each blob center pick a shape
+    nidx = []
+    for n, val in enumerate(all_shps):
+        if (picks == n).sum() < 1:
+            continue
+        # bhs = range(-(blobshape[0] // 2) if blobshape[0] % 2 != 0 else -(blobshape[0] // 2) + 1, blobshape[0] // 2 + 1)
+        # bws = range(-(blobshape[1] // 2) if blobshape[1] % 2 != 0 else -(blobshape[1] // 2) + 1, blobshape[1] // 2 + 1)
+        # extends = torch.stack([
+        #     torch.zeros(len(bhs) * len(bws)).long(),
+        #     torch.zeros(len(bhs) * len(bws)).long(),
+        #     torch.arange(bhs.start, bhs.stop).repeat(len(bws)),
+        #     torch.arange(bws.start, bws.stop).unsqueeze(1).repeat(1, len(bhs)).reshape(-1)
+        # ]).transpose(0, 1)
+
+        r, e, s = val
+
+        a = get_random_points(n=13, scale=s)
+        c, _ = get_bezier_curve(a,rad=r, edgy=e)
+        x, y = get_all_pixels(c)
+
+        extends = torch.stack([
+            torch.zeros(len(x)).long(),
+            torch.zeros(len(x)).long(),
+            torch.Tensor(x).long(),
+            torch.Tensor(y).long()
+        ]).transpose(0, 1)
+
+        nid = idx[picks == n].unsqueeze(1) + extends.unsqueeze(0)
+        if colorrange is not None:
+            col = torch.randint(
+                colorrange[0], colorrange[1], (3, )
+            )[:, None].repeat(1, nid.reshape(-1, nid.size(-1)).size(0)).int()
+            colors.append(col)
+        nid = nid.reshape(-1, extends.size(1))
+        nid = torch.max(torch.min(nid, torch.LongTensor(size) - 1), torch.LongTensor([0, 0, 0, 0]))
+        nidx.append(nid)
+    idx = torch.cat(nidx)  # all pixel indices that blobs cover, not only center indices
+
+    shp = res[idx.transpose(0, 1).numpy()].shape
+    if colorrange is not None:
+        colors = torch.cat(colors, dim=1)
+        gnoise = (torch.randn(3, *shp) * awgn).int() if awgn != 0 else (0, 0, 0)
+        res[idx.transpose(0, 1).numpy()] = colors[0] + gnoise[0]
+        res[(idx + torch.LongTensor((0, 1, 0, 0))).transpose(0, 1).numpy()] = colors[1] + gnoise[1]
+        res[(idx + torch.LongTensor((0, 2, 0, 0))).transpose(0, 1).numpy()] = colors[2] + gnoise[2]
+    else:
+        gnoise = (torch.randn(shp) * awgn).int() if awgn != 0 else 0
+        res[idx.transpose(0, 1).numpy()] = torch.ones(shp).int() * fillval + gnoise
+        res = res[:, 0, :, :]
+        if len(out_size) == 4:
+            res = res.unsqueeze(1).repeat(1, out_size[1], 1, 1)
+    # if clamp:
+    #     res = res.clamp(backval, fillval) if backval < fillval else res.clamp(fillval, backval)
+    # mask = mask[:, 0, :, :]
+    # if rotation > 0:
+    #     idx = mask.nonzero()
+    #     res = res.unsqueeze(1) if res.dim() != 4 else res
+    #     res = res.transpose(1, 3).transpose(1, 2)
+    #     for pick, blbctr in zip(picks, mask.nonzero()):
+    #         rot = np.random.uniform(-rotation, rotation)
+    #         p1, p2 = all_shps[pick]
+    #         dims = (
+    #             blbctr[0],
+    #             slice(max(blbctr[1] - floor(0.75 * p1), 0), min(blbctr[1] + ceil(0.75 * p1), res.size(1) - 1)),
+    #             slice(max(blbctr[2] - floor(0.75 * p2), 0), min(blbctr[2] + ceil(0.75 * p2), res.size(2) - 1)),
+    #             ...
+    #         )
+    #         res[dims] = torch.from_numpy(
+    #             im_rotate(
+    #                 res[dims].float(), rot, order=0, cval=0, center=(blbctr[1]-dims[1].start, blbctr[2]-dims[2].start),
+    #                 clip=False
+    #             )
+    #         ).int()
+    #     res = res.transpose(1, 2).transpose(1, 3)
+    #     res = res.squeeze() if len(out_size) != 4 else res
+    return res

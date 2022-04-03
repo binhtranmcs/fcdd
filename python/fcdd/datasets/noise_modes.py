@@ -1,5 +1,5 @@
 import torch
-from fcdd.datasets.noise import confetti_noise, colorize_noise, solid, smooth_noise
+from fcdd.datasets.noise import confetti_noise, colorize_noise, solid, smooth_noise, bezier_noise
 from fcdd.datasets.outlier_exposure.cifar100 import OECifar100
 from fcdd.datasets.outlier_exposure.emnist import OEEMNIST
 from fcdd.datasets.outlier_exposure.imagenet import OEImageNet, OEImageNet22k
@@ -8,7 +8,8 @@ from fcdd.util.logging import Logger
 MODES = [
     'gaussian', 'uniform', 'blob', 'mixed_blob', 'solid', 'confetti',  # Synthetic Anomalies
     'imagenet', 'imagenet22k', 'cifar100', 'emnist',  # Outlier Exposure
-    'mvtec', 'mvtec_gt'  # Outlier Exposure online supervision only
+    'mvtec', 'mvtec_gt',  # Outlier Exposure online supervision only
+    'bezier', 'my_confetti'
 ]
 
 
@@ -78,6 +79,15 @@ def generate_noise(noise_mode: str, size: torch.Size, oe_limit: int,
             raise NotImplementedError(
                 'MVTec-AD and MVTec-AD with ground-truth maps is only available with online supervision.'
             )
+        elif noise_mode in ['bezier']:
+            generated_noise_rgb = bezier_noise(
+                size, 0.000018, ((8, 54), (8, 54)), fillval=255, awgn=0
+            )
+            generated_noise = bezier_noise(
+                size, 0.000012, ((8, 54), (8, 54)), fillval=-255, awgn=0
+            )
+            generated_noise = generated_noise_rgb + generated_noise
+            generated_noise = smooth_noise(generated_noise, 25, 5, 1.0)
         else:
             raise NotImplementedError('Supervise noise mode {} unknown (offline version).'.format(noise_mode))
         return generated_noise
