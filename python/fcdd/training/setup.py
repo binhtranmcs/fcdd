@@ -10,7 +10,7 @@ from fcdd.models import load_nets
 from fcdd.models.bases import BaseNet
 from fcdd.util.logging import Logger
 
-OBJECTIVES = ('fcdd', 'hsc', 'ae')
+OBJECTIVES = ('fcdd', 'hsc', 'ae', 'poly')
 SUPERVISE_MODES = ('unsupervised', 'other', 'noise', 'malformed_normal', 'malformed_normal_gt')
 
 

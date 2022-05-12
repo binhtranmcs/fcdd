@@ -5,6 +5,7 @@ from fcdd.models.bases import FCDDNet, BaseNet
 from fcdd.training.ae import AETrainer
 from fcdd.training.fcdd import FCDDTrainer
 from fcdd.training.hsc import HSCTrainer
+from fcdd.training.polyloss import PLTrainer
 from fcdd.util.logging import Logger
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.optimizer import Optimizer
@@ -57,8 +58,12 @@ class SuperTrainer(object):
             self.trainer = HSCTrainer(
                 net, opt, sched, dataset_loaders, logger, objective, gauss_std, quantile, resdown, blur_heatmaps, device
             )
-        else:
+        elif objective == 'ae':
             self.trainer = AETrainer(
+                net, opt, sched, dataset_loaders, logger, objective, gauss_std, quantile, resdown, blur_heatmaps, device
+            )
+        else:
+            self.trainer = PLTrainer(
                 net, opt, sched, dataset_loaders, logger, objective, gauss_std, quantile, resdown, blur_heatmaps, device
             )
 

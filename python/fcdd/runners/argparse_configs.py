@@ -196,6 +196,16 @@ class DefaultMvtecConfig(DefaultConfig):
         )
         return parser
 
+class DefaultBTADConfig(DefaultConfig):
+    def __call__(self, parser: ArgumentParser) -> ArgumentParser:
+        parser = super().__call__(parser)
+        parser.set_defaults(
+            batch_size=16, acc_batches=8, supervise_mode='malformed_normal',
+            gauss_std=12, weight_decay=1e-4, epochs=200, preproc='lcnaug1',
+            quantile=0.99, net='FCDD_CNN224_VGG_F', dataset='btad', noise_mode='confetti'
+        )
+        return parser
+
 
 class DefaultImagenetConfig(DefaultConfig):
     def __call__(self, parser: ArgumentParser) -> ArgumentParser:
