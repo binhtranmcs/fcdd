@@ -81,10 +81,10 @@ def generate_noise(noise_mode: str, size: torch.Size, oe_limit: int,
             )
         elif noise_mode in ['bezier']:
             generated_noise_rgb = bezier_noise(
-                size, 0.000018, ((8, 54), (8, 54)), fillval=255, awgn=0
+                size, 0.000018, ((8, 8), (54, 54)), fillval=255, awgn=0, rotation=45, colorrange=(-256, 0)
             )
             generated_noise = bezier_noise(
-                size, 0.000012, ((8, 54), (8, 54)), fillval=-255, awgn=0
+                size, 0.000012, ((8, 8), (54, 54)), fillval=-255, awgn=0, rotation=45
             )
             generated_noise = generated_noise_rgb + generated_noise
             generated_noise = smooth_noise(generated_noise, 25, 5, 1.0)
