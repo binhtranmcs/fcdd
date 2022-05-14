@@ -10,6 +10,7 @@ from fcdd.datasets.outlier_exposure.cifar100 import OECifar100
 from fcdd.datasets.outlier_exposure.emnist import OEEMNIST
 from fcdd.datasets.outlier_exposure.imagenet import OEImageNet, OEImageNet22k
 from fcdd.datasets.outlier_exposure.mvtec import OEMvTec
+from fcdd.datasets.outlier_exposure.btad import OEBTAD
 from fcdd.datasets.preprocessing import ImgGTTargetTransform
 
 
@@ -76,6 +77,13 @@ class OnlineSupervisor(ImgGTTargetTransform):
         elif noise_mode == 'mvtec_gt':
             self.noise_sampler = cycle(
                 OEMvTec(
+                    (1, ) + ds.raw_shape, ds.normal_classes, limit_var=oe_limit,
+                    logger=ds.logger, gt=True, root=ds.root
+                ).data_loader()
+            )
+        elif noise_mode == 'btad_gt':
+            self.noise_sampler = cycle(
+                OEBTAD(
                     (1, ) + ds.raw_shape, ds.normal_classes, limit_var=oe_limit,
                     logger=ds.logger, gt=True, root=ds.root
                 ).data_loader()

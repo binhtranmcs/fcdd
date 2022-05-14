@@ -9,7 +9,7 @@ MODES = [
     'gaussian', 'uniform', 'blob', 'mixed_blob', 'solid', 'confetti',  # Synthetic Anomalies
     'imagenet', 'imagenet22k', 'cifar100', 'emnist',  # Outlier Exposure
     'mvtec', 'mvtec_gt',  # Outlier Exposure online supervision only
-    'bezier', 'my_confetti'
+    'bezier', 'my_confetti', 'btad_gt'
 ]
 
 
@@ -75,7 +75,7 @@ def generate_noise(noise_mode: str, size: torch.Size, oe_limit: int,
             generated_noise = next(iter(OEEMNIST(
                 size, limit_var=oe_limit, root=datadir
             ).data_loader()))
-        elif noise_mode in ['mvtec', 'mvtec_gt']:
+        elif noise_mode in ['mvtec', 'mvtec_gt', 'btad_gt']:
             raise NotImplementedError(
                 'MVTec-AD and MVTec-AD with ground-truth maps is only available with online supervision.'
             )

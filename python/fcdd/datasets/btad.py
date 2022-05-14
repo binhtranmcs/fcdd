@@ -1,9 +1,9 @@
 import numpy as np
-from python.fcdd.datasets.btad_base import BeanTech
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
 
+from fcdd.datasets.btad_base import BeanTech
 from fcdd.datasets.bases import TorchvisionDataset, GTSubset
 from fcdd.datasets.mvtec_base import MvTec
 from fcdd.datasets.online_supervisor import OnlineSupervisor
@@ -213,7 +213,7 @@ class BTAD(TorchvisionDataset):
                 OnlineSupervisor(self, supervise_mode, noise_mode, oe_limit),
             ])
             train_set = BeanTech(
-                root=self.root, split='train', download=False,
+                root=self.root, split='train', download=True,
                 target_transform=target_transform,
                 img_gt_transform=img_gt_transform, transform=transform, all_transform=all_transform,
                 shape=self.raw_shape, normal_classes=self.normal_classes,
@@ -224,7 +224,7 @@ class BTAD(TorchvisionDataset):
                 train_set, get_target_label_idx(train_set.targets.clone().data.cpu().numpy(), self.normal_classes)
             )
             test_set = BeanTech(
-                root=self.root, split='test_anomaly_label_target', download=False,
+                root=self.root, split='test_anomaly_label_target', download=True,
                 target_transform=transforms.Lambda(
                     lambda x: self.anomalous_label if x != BeanTech.normal_anomaly_label_idx else self.nominal_label
                 ),
@@ -240,7 +240,7 @@ class BTAD(TorchvisionDataset):
                 *all_transform,
             ]) if len(all_transform) > 0 else None
             train_set = MvTec(
-                root=self.root, split='train', download=False,
+                root=self.root, split='train', download=True,
                 target_transform=target_transform, all_transform=all_transform,
                 img_gt_transform=img_gt_transform, transform=transform, shape=self.raw_shape,
                 normal_classes=self.normal_classes,
@@ -248,7 +248,7 @@ class BTAD(TorchvisionDataset):
                 enlarge=BTAD.enlarge
             )
             test_set = BeanTech(
-                root=self.root, split='test_anomaly_label_target', download=False,
+                root=self.root, split='test_anomaly_label_target', download=True,
                 target_transform=transforms.Lambda(
                     lambda x: self.anomalous_label if x != BeanTech.normal_anomaly_label_idx else self.nominal_label
                 ),

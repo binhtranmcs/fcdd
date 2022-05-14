@@ -15,7 +15,6 @@ from fcdd.datasets.bases import GTMapADDataset
 from fcdd.util.logging import Logger
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.imagenet import check_integrity, verify_str_arg
-from torchvision.datasets.utils import download_url, _is_gzip, _is_tar, _is_targz, _is_zip
 
 
 class BeanTech(VisionDataset, GTMapADDataset):
@@ -25,12 +24,12 @@ class BeanTech(VisionDataset, GTMapADDataset):
     labels = (
         '01', '02', '03'
     )
-    normal_anomaly_label = 'good'
+    normal_anomaly_label = 'ok'
     normal_anomaly_label_idx = 0
 
     def __init__(self, root: str, split: str = 'train', target_transform: Callable = None,
                  img_gt_transform: Callable = None, transform: Callable = None, all_transform: Callable = None,
-                 download=False, shape=(3, 300, 300), normal_classes=(), nominal_label=0, anomalous_label=1,
+                 download=True, shape=(3, 300, 300), normal_classes=(), nominal_label=0, anomalous_label=1,
                  logger: Logger = None, enlarge: bool = False
                  ):
         """
@@ -74,7 +73,6 @@ class BeanTech(VisionDataset, GTMapADDataset):
         self.logger = logger
         self.enlarge = enlarge
 
-        assert download == False
         if download:
             self.download(shape=self.shape[1:])
 
@@ -163,7 +161,7 @@ class BeanTech(VisionDataset, GTMapADDataset):
                             sample = self.img_to_torch(sample, shape)
                         if anomaly_label != self.normal_anomaly_label:
                             mask_name = self.convert_img_name_to_mask_name(img_name)
-                            with open(os.path.join(tmp_dir, lbl, 'ground_truth', anomaly_label, mask_name), 'rb') as f:
+                            with open(os.path.join(tmp_dir, lbl, 'ground_truth', anomaly_label, img_name), 'rb') as f:
                                 mask = Image.open(f)
                                 mask = self.img_to_torch(mask, shape)
                         else:
@@ -261,7 +259,7 @@ class BeanTech(VisionDataset, GTMapADDataset):
         if extract_root is None:
             extract_root = download_root
         if not filename:
-            filename = os.path.basename(url)
+            filename = 'btad.tar.xz'
         if not os.path.exists(download_root):
             os.makedirs(download_root)
         if not check_integrity(os.path.join(download_root, filename)):
@@ -276,24 +274,8 @@ class BeanTech(VisionDataset, GTMapADDataset):
         if to_path is None:
             to_path = os.path.dirname(from_path)
 
-        if _is_tar(from_path):
-            with tarfile.open(from_path, 'r') as tar:
-                tar.extractall(path=to_path)
-        elif _is_targz(from_path):
-            with tarfile.open(from_path, 'r:gz') as tar:
-                tar.extractall(path=to_path)
-        elif _is_gzip(from_path):
-            to_path = os.path.join(to_path, os.path.splitext(os.path.basename(from_path))[0])
-            with open(to_path, "wb") as out_f, gzip.GzipFile(from_path) as zip_f:
-                out_f.write(zip_f.read())
-        elif _is_zip(from_path):
-            with zipfile.ZipFile(from_path, 'r') as z:
-                z.extractall(to_path)
-        elif BeanTech._is_tarxz(from_path):
-            with tarfile.open(from_path, 'r:xz') as tar:
-                tar.extractall(path=to_path)
-        else:
-            raise ValueError("Extraction of {} not supported".format(from_path))
+        with tarfile.open(from_path, 'r:xz') as tar:
+            tar.extractall(path=to_path)
 
     @staticmethod
     def _is_tarxz(filename):

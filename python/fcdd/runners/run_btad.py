@@ -15,7 +15,7 @@ class BTADConfig(DefaultBTADConfig):
 
 if __name__ == '__main__':
     runner = ClassesRunner(BTADConfig())
-    runner.args.logdir += '_mvtec_'
+    runner.args.logdir += '_btad_'
     runner.run()
     print()
 
